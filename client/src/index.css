@@ -18,21 +18,22 @@
 }
 
 body {
-  background-color: transparent; /* Reveal fixed 3D background */
+  background-color: var(--void);
   color: var(--star);
   font-family: 'Rajdhani', sans-serif;
   overflow-x: hidden;
+  height: 100%;
 }
 
 main {
   position: relative;
-  z-index: 10; /* Ensure content is above ThreeScene */
+  z-index: 1; /* Content above background */
 }
 
 h1, h2, h3, h4 {
   font-family: 'Orbitron', sans-serif;
   text-transform: uppercase;
-  letter-spacing: 2px;
+  letter-spacing: 4px;
 }
 
 code, .data-font {
@@ -40,33 +41,38 @@ code, .data-font {
 }
 
 .glass {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(0, 245, 255, 0.15);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  box-shadow: 0 0 40px rgba(0, 245, 255, 0.05);
-  transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+  background: rgba(255, 255, 255, 0.015);
+  border: 1px solid rgba(0, 245, 255, 0.1);
+  backdrop-filter: blur(25px) saturate(180%);
+  -webkit-backdrop-filter: blur(25px) saturate(180%);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .glass:hover {
-  border: 1px solid rgba(0, 245, 255, 0.4);
-  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(0, 245, 255, 0.3);
+  background: rgba(255, 255, 255, 0.03);
   box-shadow: 0 0 60px rgba(0, 245, 255, 0.1);
-  transform: translateY(-5px);
+  transform: translateY(-8px) scale(1.02);
 }
 
 @keyframes float {
   0%, 100% { transform: translateY(0px) rotate(0deg); }
-  33% { transform: translateY(-12px) rotate(1deg); }
-  66% { transform: translateY(-6px) rotate(-1deg); }
+  50% { transform: translateY(-20px) rotate(2deg); }
 }
 
 .float-animation {
-  animation: float 6s ease-in-out infinite;
+  animation: float 8s ease-in-out infinite;
 }
 
 .text-glitch {
   position: relative;
+  color: var(--star);
+  transition: text-shadow 0.3s ease;
+}
+
+.text-glitch:hover {
+    text-shadow: 0 0 15px var(--plasma);
 }
 
 .text-glitch:hover::before,
@@ -77,55 +83,57 @@ code, .data-font {
   left: 0;
   width: 100%;
   height: 100%;
+  opacity: 0.8;
 }
 
 .text-glitch:hover::before {
   color: var(--plasma);
-  left: 2px;
+  left: 4px;
   clip-path: polygon(0 0, 100% 0, 100% 45%, 0 45%);
-  animation: glitch 0.3s infinite;
+  animation: glitch-anim 0.2s infinite;
 }
 
 .text-glitch:hover::after {
   color: var(--pulse);
-  left: -2px;
+  left: -4px;
   clip-path: polygon(0 80%, 100% 20%, 100% 100%, 0 100%);
-  animation: glitch 0.3s infinite reverse;
+  animation: glitch-anim 0.2s infinite reverse;
 }
 
-@keyframes glitch {
+@keyframes glitch-anim {
   0% { transform: translate(0); }
-  20% { transform: translate(-2px, 2px); }
-  40% { transform: translate(-2px, -2px); }
-  60% { transform: translate(2px, 2px); }
-  80% { transform: translate(2px, -2px); }
+  25% { transform: translate(-4px, 2px); }
+  50% { transform: translate(-4px, -2px); }
+  75% { transform: translate(4px, 2px); }
   100% { transform: translate(0); }
 }
 
-/* Scroll reveal helper classes */
-.reveal {
-  opacity: 0;
-  transform: translateY(30px);
-  transition: all 0.8s ease-out;
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
 }
 
-.reveal.visible {
-  opacity: 1;
-  transform: translateY(0);
+::-webkit-scrollbar-track {
+  background: var(--void);
 }
 
-/* Custom horizontal bar for escalation */
-.escalation-bar {
-  height: 8px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
-  overflow: hidden;
+::-webkit-scrollbar-thumb {
+  background: var(--plasma);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--neural);
+}
+
+/* Section transitions */
+section {
+  padding: 120px 10%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   position: relative;
-}
-
-.escalation-fill {
-  height: 100%;
-  transition: width 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), background 0.5s ease;
 }
 
 /* Ripple effect for buttons */
@@ -135,27 +143,33 @@ code, .data-font {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 1rem 2rem;
+  padding: 1.2rem 2.5rem;
   border: 1px solid var(--plasma);
   background: transparent;
   color: var(--plasma);
   font-family: 'Orbitron', sans-serif;
   font-weight: bold;
+  font-size: 0.9rem;
+  letter-spacing: 2px;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 0 10px rgba(0, 245, 255, 0.1);
 }
 
 .btn-ripple:hover {
-  background: rgba(0, 245, 255, 0.1);
-  box-shadow: 0 0 20px rgba(0, 245, 255, 0.3);
+  background: var(--plasma);
+  color: var(--void);
+  box-shadow: 0 0 30px rgba(0, 245, 255, 0.5);
+  transform: translateY(-2px);
 }
 
 .btn-ripple .ripple {
   position: absolute;
-  background: rgba(0, 245, 255, 0.4);
+  background: rgba(255, 255, 255, 0.6);
   border-radius: 50%;
   transform: scale(0);
-  animation: ripple-anim 0.6s linear;
+  animation: ripple-anim 0.8s ease-out;
+  pointer-events: none;
 }
 
 @keyframes ripple-anim {
@@ -165,10 +179,24 @@ code, .data-font {
   }
 }
 
-section {
-  padding: 100px 10%;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
+.reveal {
+  opacity: 0;
+  transform: translateY(40px);
+  transition: all 1s cubic-bezier(0.16, 1, 0.3, 1);
 }
+
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Data stream line */
+.data-line {
+    position: absolute;
+    width: 1px;
+    height: 100%;
+    background: linear-gradient(to bottom, transparent, var(--plasma), transparent);
+    top: 0;
+    opacity: 0.2;
+}
+

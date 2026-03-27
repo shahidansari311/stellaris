@@ -1,29 +1,41 @@
-import React, { useRef, useMemo } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
-import { Points, PointMaterial, TorusKnot, Float, Stars, Line, Sphere, Icosahedron, MeshDistortMaterial } from '@react-three/drei';
+import React, { useRef, useMemo, Suspense } from 'react';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { Points, PointMaterial, Float, Stars, Line, Sphere, Icosahedron, MeshDistortMaterial } from '@react-three/drei';
 import * as THREE from 'three';
 import { useEscalationContext } from '../context/EscalationContext';
+import { EffectComposer, Bloom, ChromaticAberration, Vignette } from '@react-three/postprocessing';
+import { BlendFunction } from 'postprocessing';
 
-const Particles = ({ count = 2000 }) => {
+// 1. Dynamic Particles
+const InteractiveParticles = ({ count = 1000 }) => {
+  const { mouse } = useThree();
+  const pRef = useRef();
+  
   const points = useMemo(() => {
     const p = new Float32Array(count * 3);
     for (let i = 0; i < count; i++) {
-       p[i * 3] = (Math.random() - 0.5) * 20;
-       p[i * 3 + 1] = (Math.random() - 0.5) * 10;
-       p[i * 3 + 2] = (Math.random() - 0.5) * 10;
+       p[i * 3] = (Math.random() - 0.5) * 40;
+       p[i * 3 + 1] = (Math.random() - 0.5) * 40;
+       p[i * 3 + 2] = (Math.random() - 0.5) * 20;
     }
     return p;
   }, [count]);
 
-  const pRef = useRef();
-
   useFrame((state) => {
-    const time = state.clock.getElapsedTime();
+    if (!pRef.current) return;
+    const t = state.clock.getElapsedTime();
+    const positions = pRef.current.geometry.attributes.position.array;
     for (let i = 0; i < count; i++) {
-        pRef.current.geometry.attributes.position.array[i * 3 + 1] += Math.sin(time + pRef.current.geometry.attributes.position.array[i * 3]) * 0.005;
-        pRef.current.geometry.attributes.position.array[i * 3 + 1] += 0.005;
-        if (pRef.current.geometry.attributes.position.array[i * 3 + 1] > 5) {
-            pRef.current.geometry.attributes.position.array[i * 3 + 1] = -5;
+        const x = positions[i * 3];
+        const y = positions[i * 3 + 1];
+        positions[i * 3 + 1] += Math.sin(t * 0.2 + x) * 0.005;
+        
+        const dx = mouse.x * 15 - x;
+        const dy = mouse.y * 10 - y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 4) {
+            positions[i * 3] += dx * 0.005;
+            positions[i * 3 + 1] += dy * 0.005;
         }
     }
     pRef.current.geometry.attributes.position.needsUpdate = true;
@@ -34,146 +46,104 @@ const Particles = ({ count = 2000 }) => {
       <PointMaterial
         transparent
         color="#00f5ff"
-        size={0.02}
-        sizeAttenuation={true}
+        size={0.05}
+        sizeAttenuation
         depthWrite={false}
         blending={THREE.AdditiveBlending}
+        opacity={0.3}
       />
     </Points>
   );
 };
 
-const EngineCore = () => {
+// 2. The Engine Reactor Core
+const ReactorCore = () => {
   const { score } = useEscalationContext();
-  const torusRef = useRef();
+  const safeScore = score || 1;
+  const groupRef = useRef();
+  const ring1 = useRef();
+  const ring2 = useRef();
   
+  const intensity = 1 + (safeScore / 5);
   const coreColor = useMemo(() => {
-    const ratio = (score - 1) / 9;
-    const r = 0 + ratio * 1;
-    const g = 0.96 - ratio * 0.8;
-    const b = 1;
-    return new THREE.Color(r, g, b);
-  }, [score]);
+    const ratio = safeScore / 10;
+    return new THREE.Color().setHSL(0.5 - ratio * 0.4, 1, 0.5);
+  }, [safeScore]);
 
   useFrame((state) => {
+    if (!groupRef.current) return;
     const t = state.clock.getElapsedTime();
-    torusRef.current.rotation.x = t * 0.5;
-    torusRef.current.rotation.y = t * 0.3;
-    torusRef.current.scale.setScalar(1 + Math.sin(t * 2) * 0.05 + (score / 15));
+    groupRef.current.rotation.y = t * 0.1;
+    ring1.current.rotation.x = t * 0.5;
+    ring2.current.rotation.z = -t * 0.3;
+    const s = 1 + Math.sin(t * 3) * 0.04 + (safeScore / 25);
+    groupRef.current.scale.setScalar(s);
   });
 
   return (
-    <TorusKnot ref={torusRef} args={[1, 0.4, 128, 32]}>
-      <meshStandardMaterial 
-        color={coreColor} 
-        emissive={coreColor} 
-        emissiveIntensity={1.5 + score / 2} 
-        wireframe 
-      />
-    </TorusKnot>
+    <group ref={groupRef}>
+      <Sphere args={[0.8, 16, 16]}>
+        <meshStandardMaterial color={coreColor} emissive={coreColor} emissiveIntensity={intensity * 2} />
+      </Sphere>
+      <mesh ref={ring1}>
+        <torusGeometry args={[1.5, 0.02, 8, 64]} />
+        <meshStandardMaterial color={coreColor} emissive={coreColor} emissiveIntensity={intensity} />
+      </mesh>
+      <mesh ref={ring2} rotation={[Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[2.2, 0.03, 8, 64]} />
+        <meshStandardMaterial color="#7c3aed" emissive="#7c3aed" emissiveIntensity={intensity} />
+      </mesh>
+    </group>
   );
 };
 
-// Second 3D element: A distorted icosahedron representing "Neural Noise"
-const NeuralNoise = () => {
-  const { score } = useEscalationContext();
-  const meshRef = useRef();
-
-  useFrame((state) => {
-    const t = state.clock.getElapsedTime();
-    meshRef.current.rotation.x = t * 0.1;
-    meshRef.current.rotation.y = -t * 0.2;
-    // Move slowly across the background
-    meshRef.current.position.x = Math.sin(t * 0.5) * 5;
-    meshRef.current.position.y = Math.cos(t * 0.3) * 2;
-  });
-
-  return (
-    <Float speed={1.5} rotationIntensity={2} floatIntensity={2}>
-      <Icosahedron ref={meshRef} args={[1, 15]} position={[5, 2, -2]}>
-        <MeshDistortMaterial
-          color="#ff2d78"
-          speed={3}
-          distort={0.4 + (score / 20)}
-          radius={1}
-          emissive="#7c3aed"
-          emissiveIntensity={0.5}
-          wireframe
-        />
-      </Icosahedron>
-    </Float>
-  );
-};
-
-const Satellites = () => {
-    const groupRef = useRef();
-    const satelliteCount = 3;
-
-    useFrame((state) => {
-        const time = state.clock.getElapsedTime();
-        groupRef.current.rotation.z = time * 0.2;
-    });
-
+const PostProcessing = () => {
+    const { score } = useEscalationContext();
+    const safeScore = score || 1;
+    
     return (
-        <group ref={groupRef}>
-            {[0, 1, 2].map((i) => {
-                const angle = (i / satelliteCount) * Math.PI * 2;
-                const x = Math.cos(angle) * 3;
-                const y = Math.sin(angle) * 3;
-                return (
-                    <group key={i} position={[x, y, 0]}>
-                        <Sphere args={[0.2, 16, 16]}>
-                            <meshStandardMaterial color="#7c3aed" emissive="#7c3aed" emissiveIntensity={2} />
-                        </Sphere>
-                        <Line
-                            points={[[0, 0, 0], [-x, -y, 0]]}
-                            color="#ff2d78"
-                            lineWidth={1}
-                            transparent
-                            opacity={0.3}
-                        />
-                    </group>
-                );
-            })}
-        </group>
+        <EffectComposer multisampling={0}>
+            <Bloom 
+                intensity={0.8 + (safeScore / 10)} 
+                luminanceThreshold={0.5} 
+                luminanceSmoothing={0.5}
+            />
+            <ChromaticAberration 
+                offset={new THREE.Vector2(0.0005 * safeScore, 0.0005 * safeScore)}
+                blendFunction={BlendFunction.SCREEN}
+            />
+            <Vignette eskil={false} offset={0.1} darkness={1.1} />
+        </EffectComposer>
     );
 };
 
 const Scene = () => {
   return (
     <>
-      <ambientLight intensity={0.5} />
-      <pointLight position={[10, 10, 10]} intensity={2} color="#00f5ff" />
+      <color attach="background" args={['#010409']} />
+      <ambientLight intensity={0.2} />
+      <pointLight position={[10, 10, 10]} intensity={1.5} color="#00f5ff" />
       <pointLight position={[-10, -10, -10]} intensity={1} color="#ff2d78" />
+
+      <InteractiveParticles />
+      <ReactorCore />
       
-      <Particles />
-      <Float speed={2} rotationIntensity={1} floatIntensity={1}>
-        <EngineCore />
-        <Satellites />
-      </Float>
+      <Stars radius={50} depth={50} count={3000} factor={4} saturation={0} fade speed={1} />
       
-      <NeuralNoise />
-      
-      <Stars radius={50} depth={50} count={5000} factor={4} saturation={0} fade speed={1} />
+      <Suspense fallback={null}>
+        <PostProcessing />
+      </Suspense>
     </>
   );
 };
 
 const ThreeScene = () => {
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      width: '100vw',
-      height: '100vh',
-      zIndex: -2, // Put even further back
-      pointerEvents: 'none', // Critical: Let mouse events pass through to content
-      background: 'radial-gradient(circle at center, #050d1a 0%, #010409 100%)'
-    }}>
+    <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: -1, pointerEvents: 'none' }}>
       <Canvas 
         camera={{ position: [0, 0, 10], fov: 45 }}
-        style={{ pointerEvents: 'none' }} // Ensure individual canvas doesn't block
+        gl={{ antialias: false, powerPreference: "high-performance" }}
+        dpr={1} // Lock to 1 for stability
       >
         <Scene />
       </Canvas>
@@ -182,3 +152,5 @@ const ThreeScene = () => {
 };
 
 export default ThreeScene;
+
+
