@@ -53,11 +53,4 @@ Fronted runs on: [http://localhost:5173](http://localhost:5173)
 - **Primary Colors**: Obsidian Black (#010409), Electric Cyan (#00f5ff), Hot Magenta (#ff2d78)
 - **Fonts**: Orbitron, Rajdhani, Space Mono
 
-## 👤 Team XNORDS
-- **Shashank Tomar** (Leader)
-- **Shahid Ansari**
-- **Shreem Srivastava**
-- **Shagun Chaudhary**
 
----
-© 2026 STELLARIS Hackathon | ABES Engineering College
